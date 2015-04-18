@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+	<style>
+
+		.photo-frame{
+			margin: 10px auto;
+			padding: 5px 5px;
+			box-shadow: 0 2px 6px rgba(0,0,0,.4);
+			display: inline-block;
+			position: relative;
+		}
+		.imgContent{
+			position: relative;
+		}
+		.thumbnail{
+			height: 192px;
+			width: 128px;
+		}
+		ul{
+			list-style: none;
+			/*border:1px solid #ccc;*/
+			overflow: hidden;
+			margin:0;
+		}
+		#accordionContent{
+			margin:0px;
+			font-size:12px; 
+			width:200px; 
+			height:1%;
+			line-height:20px;  
+			float:left; 
+			display:inline;
+		}
+		.accordionItem{
+			width:100%; height:1%;  float:left; display:inline;
+		}
+		
+		.accordionItem ul li  a{ text-decoration: none;color: #0000ff;font-family: "宋体";font-size: 9pt;}
+		.accordionItem ul li  a:hover {color:#ff0000;font-family: "宋体";font-size: 9pt;}
+		.accordionItem ul li { padding:5px 6px 4px 6px; border-bottom:1px solid #EEE;}
+
+		#accordionContent .accordionItem h6{
+			
+			width: 92%;
+			padding: 5px;
+			background: #f0f0f0;
+			border: 1px solid #ccc;
+
+		}
+	</style>
+</head>
+<body>
+	
+	<div class="photo-frame">
+		<div class="imgContent"><img src="images/one_piece.jpg" alt="" class="thumbnail" id="thumbnailImg"></div>
+	</div>
+	
+	<div id="accordionContent" style="width:300px;;float:left;margin-left:20px">
+		<div class="accordionItem">
+			<h6>菜单1</h6>
+			<ul>
+				<li>1111</li>
+				<li>2222</li>
+				<li>3333</li>
+				<li>4444</li>
+			</ul>
+		</div>
+		<div class="accordionItem">
+			<h6>菜单2</h6>
+			<ul>
+				<li>1111</li>
+				<li>2222</li>
+				<li>3333</li>
+				<li>4444</li>
+				<li>5555</li>
+				<li>6666</li>
+			</ul>
+		</div>
+		<div class="accordionItem">
+			<h6>菜单3</h6>
+			<ul>
+				<li>1111</li>
+				<li>2222</li>
+			</ul>
+		</div>
+	</div>
+</body>
+<script>
+	function $() {
+		var elements = new Array();
+
+		for (var i = arguments.length - 1; i >= 0; i--) {
+			var element = arguments[i];
+
+			if (typeof element == "string") {
+				element = document.getElementById(element);
+			}
+
+			if (arguments.length == 1) {
+				return element;
+			} else {
+				elements.push(element);
+			}
+
+			return elements;
+		};
+	};
+
+	function addEvent(node, type, listener) {
+		if (!(node = $(node))) return false;
+		if (node.addEventListener) {
+			node.addEventListener(type, listener, false);
+			return true;
+		} else if (node.attachEvent) {
+			node['e' + type + listener] = listener;
+			node[type + listener] = function() {
+				node['e' + type + listener](window.event);
+			};
+			node.attachEvent('on' + type, node[type + listener]);
+			return true;
+		}
+		return false;
+	};
+
+	function camelize(s) {
+		return s.replace(/-(\w)/g, function(strMatch, p1) {
+			return p1.toUpperCase();
+		});
+	};
+
+	function uncamelize(s, sep) {
+		sep = sep || '-';
+		return s.replace(/([a-z])([A-Z])/g, function(strMatch, p1, p2) {
+			return p1 + sep + p2.toLowerCase();
+		});
+	};
+
+	function setELementStyle(element, styles) {
+		if (!(element = $(element))) return false;
+		for (property in styles) {
+			if (!styles.hasOwnProperty(property)) continue;
+
+			if (element.style.setProperty) {
+				element.style.setProperty(
+					uncamelize(property, '-'), styles[property], null);
+			} else {
+				element.style[camelize(property)] = styles[property];
+			}
+		}
+		return true;
+	};
+
+	function getElementPos(element) {
+		if (!(element = $(element))) return false;
+		var left = element.offsetLeft;
+		left += element.clientLeft;
+		var top = element.offsetTop;
+		top += element.clientTop;
+		var current = element.offsetParent;
+
+		while (current) {
+			left += current.offsetLeft + current.clientLeft;
+			top += current.offsetTop + current.clientTop;
+			current = current.offsetParent;
+		}
+		return {
+			'x': left,
+			'y': top
+		};
+	}
+
+	//获取鼠标在文档上的绝对位置(依据文档高度定位)
+	function getPointerPositionInDocument(eventObject) {
+		eventObject = eventObject || getEventObject(eventObject);
+		var x = eventObject.pageX || (eventObject.clientX +
+			(document.documentElement.scrollLeft || document.body.scrollLeft));
+		var y = eventObject.pageY || (eventObject.clientY +
+			(document.documentElement.scrollTop || document.body.scrollTop));
+		return {
+			'x': x,
+			'y': y
+		};
+	};
+
+	function getBrowserWindowSize() {
+		var de = document.documentElement;
+		return {
+			'width': (
+				window.innerWidth || (de && de.clientWidth) || document.body.clientWidth),
+			'height': (
+				window.innerHeight || (de && de.clientHeight) || document.body.clientHeight)
+		}
+	};
+
+	(function(){
+		var marginGap = 20;
+		var thumbnailImg = $('thumbnailImg');
+
+		var thumbnailImgPos = getElementPos(thumbnailImg);
+		var documentSize = getBrowserWindowSize();
+
+		var divCoverUp = document.createElement('div');
+		divCoverUp.setAttribute('id', 'divCoverUp');
+		setELementStyle(divCoverUp,{
+			height:'50px',
+			width:'40px',
+			position:'absolute',
+			opacity:0.5,
+			background:'#ccc',
+			cursor:'move'
+		});
+
+		var divShowBigImg = document.createElement('div');
+		divShowBigImg.setAttribute('id', 'divShowBigImg');
+		divShowBigImg.innerHTML = "<img src='' alt='' id='bigImg'/>";
+		setELementStyle(divShowBigImg,{
+			height:'300px',
+			width:'200px',
+			position:'absolute',
+			overflow:'hidden'			
+		});
+
+		document.body.appendChild(divShowBigImg);
+
+		var rateX = 0,rateY = 0; 
+
+
+		addEvent(thumbnailImg,'mouseover',function(){
+			this.parentNode.appendChild(divCoverUp);
+			divCoverUp.style.display = "block";
+			var bigImg = $('bigImg');
+			bigImg.src = this.src;
+			divShowBigImg.style.left = (thumbnailImgPos.x + thumbnailImg.offsetWidth + marginGap) + "px";
+			divShowBigImg.style.top = thumbnailImgPos.y + "px";	
+
+			rateX = (bigImg.offsetWidth / thumbnailImg.offsetWidth).toFixed(2);
+			rateY = (bigImg.offsetWidth / thumbnailImg.offsetWidth).toFixed(2);
+			bigImg.style.display = 'block';
+			divCoverUp.style.display = 'block';
+		});
+
+
+
+
+		addEvent(document,'mousemove',function(e){
+			var pointerPosInDocument = getPointerPositionInDocument(e);
+			var pointerPosInImgX = pointerPosInDocument.x - thumbnailImgPos.x;
+			var pointerPosInImgY = pointerPosInDocument.y - thumbnailImgPos.y;
+			var divCoverUpMovePosX = pointerPosInImgX - divCoverUp.offsetWidth / 2;
+			var divCoverUpMovePosY = pointerPosInImgY - divCoverUp.offsetHeight / 2;
+
+			divCoverUp.style.left = divCoverUpMovePosX + "px";
+			divCoverUp.style.top = divCoverUpMovePosY + "px";
+
+			if(divCoverUpMovePosX < 0) divCoverUpMovePosX = 0;
+			if(divCoverUpMovePosX + divCoverUp.offsetWidth > thumbnailImg.offsetWidth)
+				divCoverUpMovePosX = thumbnailImg.offsetWidth - divCoverUp.offsetWidth;
+			if(divCoverUpMovePosY < 0) divCoverUpMovePosY = 0;
+			if(divCoverUpMovePosY + divCoverUp.offsetHeight > thumbnailImg.offsetHeight)
+				divCoverUpMovePosY = thumbnailImg.offsetHeight - divCoverUp.offsetHeight;
+
+			if(pointerPosInImgX < 0 || pointerPosInImgY < 0 
+				|| pointerPosInImgX > thumbnailImg.offsetWidth || pointerPosInImgY > thumbnailImg.offsetHeight) divCoverUp.style.display = bigImg.style.display =  'none';
+
+
+			divCoverUp.style.left = divCoverUpMovePosX + "px";
+			divCoverUp.style.top = divCoverUpMovePosY + "px";
+
+			divShowBigImg.scrollTop = divCoverUpMovePosY * 5;
+			divShowBigImg.scrollLeft = divCoverUpMovePosX * 5;
+		});
+
+	})();
+
+
+	(function(){
+		var accordionContent = $('accordionContent');
+		var titles = accordionContent.getElementsByTagName('h6');
+		var uls = accordionContent.getElementsByTagName('ul');
+
+		var isExpand = [];
+
+		for (var i = 0; i < titles.length; i++) {
+			isExpand[i] = true;
+		};
+
+		for (var i = 0; i < titles.length; i++) {
+			uls[i].maxHeight = uls[i].offsetHeight;
+			bindEvent(i);
+		};
+		function bindEvent(i){
+			addEvent(titles[i],'click',function(){
+				expand(i);
+			}); 
+		}
+		function expand(i){
+
+			if(isExpand[i]){
+				uls[i].timer = setInterval(function(){
+					var h = uls[i].offsetHeight;
+					if( h > 0 ){
+						var v = Math.ceil(h / 10);
+						v  = h - v;
+						uls[i].style.height = v + "px";
+					}else{
+						isExpand[i] = false;
+						uls[i].style.height = "0px";
+						clearInterval(uls[i].timer);
+					}
+					 
+				},50);
+			}else{
+				uls[i].timer = setInterval(function(){
+					var h = uls[i].offsetHeight;
+					if( h < uls[i].maxHeight ){
+						var v = Math.ceil((uls[i].maxHeight - h) / 10);
+						v += h;
+						uls[i].style.height = v + "px";
+					}else{
+						isExpand[i] = true;
+						uls[i].style.height = uls[i].maxHeight + "px";
+						clearInterval(uls[i].timer);
+					}
+					 
+				},50);
+			}
+		}
+
+
+
+
+
+		/*for(var i=0;i<uls.length; i++){
+			uls[i].maxHeight = uls[i].offsetHeight;
+			uls[i].style.height = "0px";
+			uls[i].isExpand = false;
+		}
+
+		for(var i=0;i<titles.length;i++){
+
+			addEvent(titles[i],'click',function(){
+				var thisParentNode = this.parentNode;
+				var ul = thisParentNode.getElementsByTagName('ul')[0];
+				
+				for(var i=0;i<uls.length; i++){
+					uls[i].style.height = "0px";
+				}
+
+				ul.timer = setInterval(function(){
+					var h = ul.offsetHeight;
+					if(h < ul.maxHeight){
+						var v = Math.ceil((ul.maxHeight - h) / 10);
+						v += h;
+						ul.style.height = v + "px";
+					}else{
+						ul.isExpand = true;
+						clearInterval(ul.timer);
+					}
+					
+				},50);
+
+				var targetPos = ul.offsetHeight;
+				var initPos = 0,currentCount=0,count = 20;
+				if(targetPos > 0) {
+					ul.maxHeight = targetPos;
+					currentCount=count;
+				}
+				if(ul.isExpand){
+					ul.timer = setInterval(function(){
+						if(currentCount == 0){
+							ul.isExpand = false;
+							clearInterval(ul.timer);
+						}
+						var temp = easeOut(initPos,targetPos,currentCount,count);
+						ul.style.height = temp + 'px';
+						currentCount --;
+					},50);
+				}else{
+					ul.timer = setInterval(function(){
+						if(currentCount == count){
+							ul.isExpand = true;
+							clearInterval(ul.timer);
+						}
+						var temp = easeOut(initPos,ul.maxHeight,currentCount,count);
+						ul.style.height = temp + 'px';
+						currentCount ++;
+					},50);
+				}
+			});
+		}*/
+
+
+		function linear(initPos,targetPos,currentCount,count){
+			return (targetPos - initPos) / count * currentCount + initPos;
+		}
+		function easeIn(initPos,targetPos,currentCount,count){
+			return (targetPos - initPos) * (currentCount /= count) * currentCount + initPos;
+		}
+		function easeOut(initPos,targetPos,currentCount,count){
+			return -(targetPos - initPos) * (currentCount /= count) * (currentCount - 2) + initPos;
+		}
+
+	})();
+
+	//myAccoridion('accordionContent','h6','ul');
+
+	/*function myAccoridion(parentNode,titleTag,contentTag,speedCount) {
+		if(!(parentNode = $(parentNode))) return false;
+
+		var titles = parentNode.getElementsByTagName(titleTag);
+		var contents = parentNode.getElementsByTagName(contentTag);
+		if(!(titles && contents) && titles.length > 0 && contents.length > 0 ) return false;
+
+		var title = null; //accordionContent.getElementsByTagName('h6')[0];
+		var content = null; //accordionContent.getElementsByTagName('ul')[0];
+
+		var speedCount = speedCount || 10;
+		
+		var isExpand = [];
+
+		for (var i = 0; i < titles.length; i++) {
+			isExpand[i] = false;
+		};
+
+		function expandFold(i){
+			var count = 0;
+			
+			var t = setInterval(function(){
+				if(count == 10) clearInterval(t);
+				console.log(i+"===="+count);
+				count ++;
+			}, 30);
+		}
+
+		function bindEvent(i){
+			addEvent(titles[i], 'click', function() {
+				expandFold(i);
+			});
+		}
+
+	for (var i = 0; i < titles.length; i++) {
+		title = titles[i];
+		content = contents[i];
+		
+		(function(i) {
+			var maxh = contents[i].offsetHeight;
+			addEvent(titles[i], 'click', function() {
+				var temp = 0;
+				var timer = null;
+				if (!isExpand[i]) {
+					var initPos = 0,
+						currentCount = 10;
+					timer = setInterval(function() {
+
+						var temph = (maxh - initPos) * currentCount / speedCount;
+						contents[i].style.height = temph + "px";
+						contents[i].style.opacity = currentCount / speedCount;
+						currentCount--;
+						// var temph = content.offsetHeight;
+						// var v = content.offsetHeight / speedCount;
+						// v = (v < 1) ? 1 : v;
+						// content.style.height = (temph - v) + "px";
+						// content.style.opacity = v / 30;
+						if (currentCount <= 0) {
+							clearInterval(timer);
+							contents[i].style.height = '0px';
+							isExpand[i] = true;
+						}
+					}, 50);
+				} else {
+					timer = setInterval(function() {
+						var temph = contents[i].offsetHeight;
+						var v = Math.round((maxh - temph) / speedCount);
+						v = (v < 1) ? 1 : v;
+						v += temph
+						contents[i].style.height = (v) + "px";
+						contents[i].style.opacity = v / maxh;
+						if (temph >= maxh) {
+							clearInterval(timer);
+							contents[i].style.height = maxh + 'px';
+							isExpand[i] = false;
+						}
+					}, 50);
+				}
+			});
+		})(i);
+			
+			// bindEvent(i);
+			addEvent(title, 'click', function() {
+				
+				var temp = 0;
+				var timer = null;
+				if (!isExpand[i]) {
+					var initPos = 0,
+						currentCount = 10;
+					timer = setInterval(function() {
+						var temph = (maxh - initPos) * currentCount / speedCount;
+						content.style.height = temph + "px";
+						content.style.opacity = currentCount / speedCount;
+						currentCount--;
+						// var temph = content.offsetHeight;
+						// var v = content.offsetHeight / speedCount;
+						// v = (v < 1) ? 1 : v;
+						// content.style.height = (temph - v) + "px";
+						// content.style.opacity = v / 30;
+						if (currentCount <= 0) {
+							clearInterval(timer);
+							content.style.height = '0px';
+							isExpand[i] = true;
+						}
+					}, 50);
+				} else {
+					timer = setInterval(function() {
+						var temph = content.offsetHeight;
+						var v = Math.round((maxh - temph) / speedCount);
+						v = (v < 1) ? 1 : v;
+						v += temph
+						content.style.height = (v) + "px";
+						content.style.opacity = v / maxh;
+						if (temph >= maxh) {
+							clearInterval(timer);
+							content.style.height = maxh + 'px';
+							isExpand[i] = false;
+						}
+					}, 50);
+				}
+			});
+		}
+
+
+	}*/
+	
+</script>
+</html>

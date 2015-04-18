@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+	<style>
+		div.photo-frame{
+			padding: 8px 8px;
+			box-shadow: 0 2px 6px rgba(0,0,0,.4);
+			width: 200px;
+			height: 120px;
+			overflow: hidden;
+		}
+		.photo-frame img{
+			width: 200px;
+			height: 120px;
+		}
+	</style>
+</head>
+<body>
+	<div class="photo-frame">
+		<img src="images/bleach.jpg" alt="" id="thumbnail">
+	</div>
+</body>
+<script>
+
+	(function(){
+		var imageWidth = 580, imageHeight = 435;
+
+		var posInfo = {
+				pointerStart:null,
+				resizeeStart:null,
+				cropAreaStart:null,
+				maxX:null,
+				maxY:null,
+				isResizeCropSize:false
+			};
+
+		var thumbnail = $('thumbnail');
+		addEvent(thumbnail,'click',function(){
+
+			var windowSize = getWindowSize();
+			//创建窗口背景底层蒙版
+			var backdrop = document.createElement('div');
+			setStyle(backdrop,{
+				'position':'absolute',
+				'left':0,
+				'top':0,
+				'z-index':10000,
+				'height':windowSize.height + "px",
+				'width':windowSize.width + "px",
+				'background-color':'black',
+				'opacity':'0.8'
+			});
+			document.body.appendChild(backdrop);
+
+			//创建编辑区域的div
+			var editor = document.createElement('div');
+			setStyle(editor,{
+				'position':'absolute',
+				'left':(windowSize.width - imageWidth) / 2 + "px",
+				'top':(windowSize.height - imageHeight) / 2 + "px",
+				'height':imageHeight + "px",
+				'width':imageWidth + "px",
+				// 'border':'1px solid red',
+				'z-index':10001	
+			});
+			document.body.appendChild(editor);
+
+			//创建工具div
+			var resizeHandle = document.createElement('div');
+			setStyle(resizeHandle,{
+				'position':'absolute',
+				'left':(imageWidth - 18)+"px",
+				'top':(imageHeight - 18)+"px",
+				'height':'28px',
+				'width':'28px',
+				'background':'transparent url(images/handles.gif) no-repeat 0 0'
+			});
+			editor.appendChild(resizeHandle);
+
+			//创建底层图片
+			var resizee = document.createElement('img');
+			resizee.src = thumbnail.src;
+			setStyle(resizee,{
+				'position':'absolute',
+				'left':0,
+				'top':0,
+				'height':imageHeight + "px",
+				'width':imageWidth + "px",
+				'margin':0,
+				'padding':0
+			});
+			editor.appendChild(resizee);
+
+			//创建图片蒙版上的div
+			var resizeeCover = document.createElement('div');
+			setStyle(resizeeCover,{
+				'position':'absolute',
+				'left':0,
+				'top':0,
+				'height':imageHeight + "px",
+				'width':imageWidth + "px",
+				'background-color':'black',
+				'opacity':'0.5',
+				//IE
+				'filter':'alpha(opacity=50)'
+			});
+			editor.appendChild(resizeeCover);
+
+			//创建切割区域div
+			var cropArea = document.createElement('div');
+			setStyle(cropArea,{
+				'position':'absolute',
+				'left':0,
+				'top':0,
+				'height':imageHeight + "px",
+				'width':imageWidth + "px",
+				'overflow':'hidden'
+			});
+			editor.appendChild(cropArea);
+
+			//创建图片克隆,实际就是要切割拖拉的图片
+			var resizeeClone = resizee.cloneNode(false);
+			cropArea.appendChild(resizeeClone);
+
+			//创建右上角图片尺寸显示区域
+			var cropSizeDisplay = document.createElement('div');
+			setStyle(cropSizeDisplay,{
+				'position':'absolute',
+				'left':0,
+				'top':0,
+				'color':'white',
+				'background-color':'black',
+				'font-size':'10px',
+				'line-height':'1em',
+				'padding':'4px'
+			});
+			cropArea.appendChild(cropSizeDisplay);
+
+			//创建取消按钮
+			var cancelHandle = document.createElement('div');
+			setStyle(cancelHandle,{
+				'position':'absolute',
+				'right':0,
+				'top':0,
+				'background':'transparent url(images/handles.gif) no-repeat -29px -11px',
+				'height':'16px',
+				'width':'16px'
+			});
+			cropArea.appendChild(cancelHandle);
+
+			//创建保存按钮
+			var saveHandle = document.createElement('div');
+			setStyle(saveHandle,{
+				'position':'absolute',
+				'left':0,
+				'bottom':0,
+				'background':'transparent url(images/handles.gif) no-repeat -40px 0px',
+				'height':'16px',
+				'width':'16px'
+			});
+			cropArea.appendChild(saveHandle);
+
+			//创建切割按钮
+			var cropSizeHandle = document.createElement('div');
+			setStyle(cropSizeHandle,{
+				'position':'absolute',
+				'right':0,
+				'bottom':0,
+				'background':'transparent url(images/handles.gif) no-repeat 0px 0px',
+				'height':'18px',
+				'width':'18px'
+			});
+			cropArea.appendChild(cropSizeHandle);
+
+			//添加鼠标移入移出事件
+			//拖动手柄的移入移出变化
+			addEvent(resizeHandle,'mouseover',function(){
+				setStyle(this,{'background-position':'0px -29px'});
+			});
+			addEvent(resizeHandle,'mouseout',function(){
+				setStyle(this,{'background-position':'0px 0px'});
+			});
+			//裁剪手柄的移入移出变化
+			addEvent(cropSizeHandle,'mouseover',function(){
+				setStyle(this,{'background-position':'0px -29px'});
+			});
+			addEvent(cropSizeHandle,'mouseout',function(){
+				setStyle(this,{'background-position':'0px 0px'});
+			});
+
+			//取消手柄的移入移出变化
+			addEvent(cancelHandle,'mouseover',function(){
+				setStyle(this,{'background-position':'-29px -40px'});
+			});
+			addEvent(cancelHandle,'mouseout',function(){
+				setStyle(this,{'background-position':'-29px -11px'});
+			});
+
+			//保存手柄的移入移出变化
+			addEvent(saveHandle,'mouseover',function(){
+				setStyle(this,{'background-position':'-40px -29px'});
+			});
+			addEvent(saveHandle,'mouseout',function(){
+				setStyle(this,{'background-position':'-40px 0px'});
+			});
+
+			//添加拖动手柄鼠标点下事件
+			addEvent(resizeHandle,'mousedown',resizeMouseDown);
+
+			//添加截图手柄鼠标点下事件
+			addEvent(cropSizeHandle,'mousedown',function(){
+				posInfo.isResizeCropSize = true;
+			});
+
+			//添加截图区域鼠标点下事件
+			addEvent(cropArea,'mousedown',cropMouseDown);
+
+			
+
+			//拖动手柄鼠标点下事件,主要获取点击时鼠标的位置，以及图片的位置及宽高
+			function resizeMouseDown(e){
+				posInfo.pointerStart = getPointerPositionInDocument(e);
+				posInfo.resizeeStart = getDimensions(resizee);
+				posInfo.cropAreaStart = getDimensions(cropArea);
+
+				addEvent(document,'mousemove',resizMouseMove);
+				addEvent(document,'mouseup',resizeMouseUp);
+
+				stopPropagation(e);
+				stopDefault(e);
+			}
+
+			//底层图片拖动改变大小，注意需要改变很多内嵌元素的位置和大小
+			function resizMouseMove(e){
+				var pointer = getPointerPositionInDocument(e);
+				var moveDistanceX = pointer.x - posInfo.pointerStart.x;
+				var moveDistanceY = pointer.y - posInfo.pointerStart.y;
+
+				var width = posInfo.resizeeStart.width + moveDistanceX;
+				var height = posInfo.resizeeStart.height + moveDistanceY;
+
+				if(width < 42) width = 42;
+				if(height < 42) height = 42;
+
+				var widthPercent = width / posInfo.resizeeStart.width;
+				var heightPercent = height / posInfo.resizeeStart.height;
+
+				var cropWidth = Math.ceil(posInfo.cropAreaStart.width * widthPercent);
+				var cropHeight = Math.ceil(posInfo.cropAreaStart.height * heightPercent);
+				var cropLeft = Math.ceil(posInfo.cropAreaStart.left * widthPercent);
+				var cropTop = Math.ceil(posInfo.cropAreaStart.top * heightPercent);
+
+
+				//重新定义各个元素的位置和宽高
+				setStyle(resizee,{
+					'width':width + "px",
+					'height':height + "px"
+				});
+				setStyle(resizeeCover,{
+					'width':width + "px",
+					'height':height + "px"
+				});
+				setStyle(resizeHandle,{
+					'left':(width-18) + "px",
+					'top':(height-18) + "px"
+				});
+				setStyle(cropArea,{
+					'width':cropWidth + "px",
+					'height':cropHeight + "px",
+					'top':cropTop + "px",
+					'left':cropLeft + "px",
+				});
+
+				setStyle(resizeeClone,{
+					'left':(cropLeft*-1) + "px",
+					'top':(cropTop*-1) + "px",
+					'width':width + "px",
+					'height':height + "px"
+					
+				});
+
+				stopPropagation(e);
+				stopDefault(e);
+
+			}
+			function resizeMouseUp(e){
+				removeEvent(document,'mousemove',resizMouseMove);
+				removeEvent(document,'mouseup',resizeMouseUp);
+				stopPropagation(e);
+				stopDefault(e);
+			}
+
+			function cropMouseDown(e){
+				posInfo.pointerStart = getPointerPositionInDocument(e);
+				posInfo.cropAreaStart = getDimensions(cropArea);
+				posInfo.resizeeStart = getDimensions(resizee);
+
+				posInfo.maxX = posInfo.resizeeStart.left + posInfo.resizeeStart.width;
+				posInfo.maxY = posInfo.resizeeStart.top + posInfo.resizeeStart.height;
+
+				addEvent(document,'mousemove',cropMouseMove);
+				addEvent(document,'mouseup',cropMouseUp);
+				stopPropagation(e);
+				stopDefault(e);
+			}
+
+			function cropMouseMove(e){
+				var pointer = getPointerPositionInDocument(e);
+
+				if(posInfo.isResizeCropSize){
+
+					//重新得到截图区域的大小	
+					var width = (posInfo.cropAreaStart.width + pointer.x - posInfo.pointerStart.x);
+					var height = (posInfo.cropAreaStart.height + pointer.y - posInfo.pointerStart.y);
+
+					//大小改变后和原图的比列	
+					var widthPercent = (width / posInfo.cropAreaStart.width);
+        			var heightPercent = (height / posInfo.cropAreaStart.height);
+
+        			if(posInfo.cropAreaStart.left + width > posInfo.maxX){
+        				width = posInfo.maxX - posInfo.cropAreaStart.left;
+        			}else if(width < 36){
+        				width = 36;
+        			}
+
+        			if(posInfo.cropAreaStart.top + height > posInfo.maxY){
+        				height = posInfo.maxY - posInfo.cropAreaStart.top;
+        			}else if(height < 36){
+        				height = 36;
+        			}
+
+        			setStyle(cropArea,{
+        				'width':width + "px",
+        				'height':height + "px"
+        			});
+
+				}else{
+					var left = posInfo.cropAreaStart.left + pointer.x - posInfo.pointerStart.x;
+					var top = posInfo.cropAreaStart.top + pointer.y - posInfo.pointerStart.y;
+
+					var maxTop = posInfo.maxY - posInfo.cropAreaStart.height;
+					var maxLeft = posInfo.maxX - posInfo.cropAreaStart.width;
+					if(left < 0){
+						left = 0;
+					}
+					if(left > maxLeft){
+						left = maxLeft;
+					}	
+					if(top < 0){
+						top = 0;
+					}
+					if(top > maxTop){
+						top = maxTop;
+					}
+
+					setStyle(cropArea,{
+						'top':top + "px",
+						'left':left + "px"
+					});
+
+					setStyle(resizeeClone,{
+						'top':(top * -1) + "px",
+						'left':(left * -1) + "px",
+					});
+					stopPropagation(e);
+					stopDefault(e);
+				}
+			};
+
+			function cropMouseUp(e){
+				removeEvent(document,'mousemove',cropMouseMove);
+				removeEvent(document,'mousemove',cropMouseUp);
+				posInfo.isResizeCropSize = false;
+				stopPropagation(e);
+				stopDefault(e);
+			};
+
+
+
+
+
+			addEvent(window,'resize',function(){
+				var windowSize = getWindowSize();
+				setStyle(backdrop,{
+					'left':0,
+					'top':0,
+					'width':windowSize.width + "px",
+					'height':windowSize.height + "px"
+				});
+			});
+
+
+		});
+	})();
+
+	function $() {
+		var elements = new Array();
+
+		for (var i = arguments.length - 1; i >= 0; i--) {
+			var element = arguments[i];
+
+			if (typeof element == "string") {
+				element = document.getElementById(element);
+			}
+
+			if (arguments.length == 1) {
+				return element;
+			} else {
+				elements.push(element);
+			}
+
+			return elements;
+		};
+	};
+
+	function addEvent(node, type, listener) {
+		if (!(node = $(node))) return false;
+		if (node.addEventListener) {
+			//W3C
+			node.addEventListener(type, listener, false);
+			return true;
+		} else if (node.attachEvent) {
+			node['e' + type + listener] = listener;
+			node[type + listener] = function() {
+				node['e' + type + listener](window.event);
+			};
+			node.attachEvent('on' + type, node[type + listener]);
+			return true;
+		}
+
+		return false;
+
+	};
+
+	//移出事件
+	function removeEvent(node,type,listener){
+		if (!(node = $(node))) return false;
+		if(node.removeEventListener){
+			node.removeEventListener(type,listener,false);
+			return true;
+		}else if(node.removeEvent){
+			node.detachEvent('on'+type,node[type+listener]);
+			node[type+listener] = null;
+			return true;
+		}
+		return false;
+	};
+
+	//获取事件对象
+	function getEventObject(e){
+		return e || window.event;
+	
+	}
+	//组织事件冒泡
+	function stopPropagation(eventObject){
+		var eventObject = eventObject || getEventObject();
+		if(eventObject.stopPropagation){
+			eventObject.stopPropagation();
+		}else{
+			eventObject.cancelBubble = true;
+		}
+	};
+	//阻止浏览器默认 事件
+	function stopDefault(eventObject){
+		var eventObject = eventObject || getEventObject();
+		if(eventObject.preventDefault){
+			eventObject.preventDefault();
+		}else{
+			eventObject.returnValue = false;
+		}
+	}
+
+	function setStyle(element, styles) {
+		if (!(element = $(element))) return false;
+		for (property in styles) {
+			if (!styles.hasOwnProperty(property)) continue;
+
+			if (element.style.setProperty) {
+				element.style.setProperty(
+					uncamelize(property, '-'), styles[property], null);
+			} else {
+				element.style[camelize(property)] = styles[property];
+			}
+		}
+		return true;
+	};
+
+	function camelize(s) {
+		return s.replace(/-(\w)/g, function(strMatch, p1) {
+			return p1.toUpperCase();
+		});
+	};
+
+	function uncamelize(s, sep) {
+		sep = sep || '-';
+		return s.replace(/([a-z])([A-Z])/g, function(strMatch, p1, p2) {
+			return p1 + sep + p2.toLowerCase();
+		});
+	};
+
+	function getPointerPositionInDocument(eventObject) {
+		eventObject = eventObject || getEventObject(eventObject);
+		var x = eventObject.pageX || (eventObject.clientX +
+			(document.documentElement.scrollLeft || document.body.scrollLeft));
+		var y = eventObject.pageY || (eventObject.clientY +
+			(document.documentElement.scrollTop || document.body.scrollTop));
+		return {
+			'x': x,
+			'y': y
+		};
+	};
+
+	function getWindowSize(){
+		var width = height = 0;
+		if(this.innerWidth){
+			width = this.innerWidth;
+			height = this.innerHeight;
+		}else if(document.documentElement && document.documentElement.clientHeight){
+			width = document.documentElement.clientWidth;
+			height = document.documentElement.clientHeight;
+		}else if(document.body && document.body.clientHeight){
+			width = document.body.clientWidth;
+			height = document.body.clientHeight;
+		}
+
+		return {'width':width,'height':height};
+	}
+
+	function getDimensions(element){
+		if (!(element = $(element))) return false;
+
+		return {
+			'left':element.offsetLeft,
+			'top':element.offsetTop,
+			'width':element.offsetWidth,
+			'height':element.offsetHeight
+		};
+	}
+</script>
+</html>
