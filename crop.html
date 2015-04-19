@@ -1,3 +1,4 @@
+<!-- 一个简单的js截图代码 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -63,7 +64,7 @@
 				'height':imageHeight + "px",
 				'width':imageWidth + "px",
 				// 'border':'1px solid red',
-				'z-index':10001	
+				'z-index':10001
 			});
 			document.body.appendChild(editor);
 
@@ -217,7 +218,7 @@
 			//添加截图区域鼠标点下事件
 			addEvent(cropArea,'mousedown',cropMouseDown);
 
-			
+
 
 			//拖动手柄鼠标点下事件,主要获取点击时鼠标的位置，以及图片的位置及宽高
 			function resizeMouseDown(e){
@@ -278,7 +279,7 @@
 					'top':(cropTop*-1) + "px",
 					'width':width + "px",
 					'height':height + "px"
-					
+
 				});
 
 				stopPropagation(e);
@@ -311,11 +312,11 @@
 
 				if(posInfo.isResizeCropSize){
 
-					//重新得到截图区域的大小	
+					//重新得到截图区域的大小
 					var width = (posInfo.cropAreaStart.width + pointer.x - posInfo.pointerStart.x);
 					var height = (posInfo.cropAreaStart.height + pointer.y - posInfo.pointerStart.y);
 
-					//大小改变后和原图的比列	
+					//大小改变后和原图的比列
 					var widthPercent = (width / posInfo.cropAreaStart.width);
         			var heightPercent = (height / posInfo.cropAreaStart.height);
 
@@ -347,7 +348,7 @@
 					}
 					if(left > maxLeft){
 						left = maxLeft;
-					}	
+					}
 					if(top < 0){
 						top = 0;
 					}
@@ -451,7 +452,7 @@
 	//获取事件对象
 	function getEventObject(e){
 		return e || window.event;
-	
+
 	}
 	//组织事件冒泡
 	function stopPropagation(eventObject){
